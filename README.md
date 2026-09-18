@@ -110,9 +110,9 @@ This is **v1**. Backwards-incompatible changes will bump the major version and
 the `v1` segment of `schema_url`. The `uuid` is permanent and does not change
 across versions. See the [spec's versioning guidance][spec].
 
-## Relationship to [`zarr-enum-convention`][]
+## Relationship to `zarr-enum-convention`
 
-Categorical columns are some of the most common features of modern dataframes.
+Categorical columns (as potentially represented on-disk in [`zarr-convention-enum`]) are some of the most common features of modern dataframes.
 
 Furthermore, this spec highlights the opportunity for a group to be interpreted as a 1d array if `codes` is 1d.  *We thus seek a way to formalize a group to indicate that it can be interpreted as 1d*.
 
