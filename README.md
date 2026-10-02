@@ -29,26 +29,31 @@ I thus put forth a convention for dataframes in zarr, which is little more than 
 
 ## Layout
 
-A conforming node is a Zarr group containing at least one child array or group, a **1d-interpreted array**, to be optionally interpreted as an index of the dataframe if it is titled `index` to indicate its role as such, alongside any number of other **1d-interpreted arrays** arrays of the **same length**:
+A conforming node is a Zarr group whose children are all **1d-interpreted arrays**.
+All member names below are literal. Column *names* are never stored as member names; they live in `columns`.
 
-```
-my_datafarame/                   # group, carries the convention metadata and the corresponding 1d arrays
-├── column_1                # array/group, interpreted as 1d, a column (or the sole index) of the dataframe
-├── column_2                # array/group, interpreted as 1d, a column (or the sole index) of the dataframe
-...
-```
+- `columns` (required): the column names of the dataframe, in order.
+- `index` (optional): the index of the dataframe.
+- `column_1`, `column_2`, …, `column_n`: the data columns, numbered consecutively from 1 with no gaps.
 
-| Member   | Kind  | Requirement                                                                                            |
-| -------- | ----- | ------------------------------------------------------------------------------------------------------ |
-| `index`  | array | The columns that should serve as an index if an implementation supports it         |
-| `column_1` | array | The first "data" column                    |
-| `column_2` | array | The second "data" column                    |
+`columns` has one entry per column, and the index counts as a column if present:
+if `index` is present, `columns[0]` is the name of the index and `columns[i]` is the name of `column_i`;
+otherwise, `columns[i-1]` is the name of `column_i`.
+Thus `len(columns)` is `n + 1` with an index and `n` without one.
+
+All children except `columns` MUST have the **same length**.
+
+| Member     | Kind        | Requirement |
+| ---------- | ----------- | ----------- |
+| `columns`  | array/group | The columns names in column order. The list MUST include the index name as first entry if an index is present. |
+| `index`    | array/group | The column that should serve as an index if an implementation supports it (optional) |
+| `column_i` | array/group | The *i*th "data" column |
 
 ### Semantics
 
 Here we clearly define what we mean by:
 
-**1d-interpreted arrays**: This term is used to indicate that a group can be interpreted as a 1d array, such as the [`zarr-convention-enum`] or a future convetnion for genomics data that might have separate 1d arrays for chromosome/position/variant, but could be interpreted as a 1d array via a [custom extension array for genomics][]. A concrete example of this interpretability is anndata's [nullable strings][].
+**1d-interpreted arrays**: This term is used to indicate that a group can be interpreted as a 1d array, such as the [`zarr-convention-enum`] or a future convention for genomics data that might have separate 1d arrays for chromosome/position/variant, but could be interpreted as a 1d array via a [custom extension array for genomics][]. A concrete example of this interpretability is anndata's [nullable strings][].
 **same length**: This means that the separate **1d-interpreted arrays** should all be of the same lenght i.e., be interpreted as 1d arrays of the same length whose entries' positions within the array match that of another **1d-interpreted array**.
 
 ## Convention attributes
@@ -56,10 +61,14 @@ Here we clearly define what we mean by:
 The group's `attributes` MUST contain a `zarr_conventions` entry (per the
 [spec][spec]) identifying this convention, plus the namespaced property below.
 
-| Attribute      | Type    | Req. | Meaning                                                                                                    |
-| -------------- | ------- | ---- | ---------------------------------------------------------------------------------------------------------- |
-| `df:index` | string | no  | The column to be used as the index if the reading data structure may support that       |
-| `df:columns` | array | yes  | The arrays in this group that serve as the columns of the dataframe. The order of this list *should* be used to indicate the order in which the columns are present when written. This list *must* include the index above.       |
+| Attribute       | Type        | Req. | Meaning |
+| --------------- | ----------- | ---- | ------- |
+| `df:shape`      | `number[2]` | yes  | data frame dimensions \[rows, columns\], useful for data frames with no column or index |
+
+`df:shape` MUST be consistent with the group's children:
+
+- `df:shape[1]` MUST equal the length of `columns` (note that `index` counts as a column).
+- `df:shape[0]` MUST equal the length of every child except `columns`.
 
 Properties are namespaced with the `df:` prefix to avoid collisions
 with other conventions present on the same node, as recommended by the spec.
@@ -80,8 +89,7 @@ with other conventions present on the same node, as recommended by the spec.
                 "description": "A collection of 1d-interpreted arrays to be used as a dataframe"
             }
         ],
-        "df:index": "xy_coords",
-        "df:columns": ["column_1", "columns_2"]
+        "df:shape": [300, 10]
     }
 }
 ```
@@ -98,11 +106,12 @@ A convention-aware reader:
 1. Reads the group's `attributes.zarr_conventions` array and matches an entry by
    `uuid == "1f1b36d2-3185-6da8-91f6-9a0823af2d33"` (falling back to
    `schema_url`, then `spec_url`, per the spec's identity precedence).
-2. Opens each child array/group at `df:columns` (and `df:index` if present).
-3. Constructs a 1d array out of each, and asserts they are of the same length in their in-memory representation.
-4. Assembles a dataframe with the column order in `columns` if applicable to the in-memory data structure.
+2. Reads the `columns` child array/group and asserts that it has length `df:shape[1]`.
+3. Opens all child arrays/groups referred to by each entry of `columns`.
+4. Constructs a 1d array out of each, and asserts their lengths each match `df:shape[0]` in their in-memory representation.
+5. Assembles a dataframe with the column order in `columns` if applicable to the in-memory data structure.
 
-A reader that does **not** know this convention still sees an ordinary group with one or more readable arrays and groups whose titles likely indicate their meaning so this convention is **safely ignorable**.
+A reader that does **not** know this convention still sees an ordinary group with one or more readable arrays and groups with easily inferable meanings so this convention is **safely ignorable**.
 
 ## Versioning
 
@@ -120,10 +129,10 @@ Furthermore, this spec highlights the opportunity for a group to be interpreted 
 
 | AnnData                          | This convention                                            |
 | -------------------------------- | ---------------------------------------------------------- |
-| `encoding-type: "dataframe"`   | `zarr_conventions[].uuid == 1f1b36d2-...`                  |
+| `encoding-type: "dataframe"`     | `zarr_conventions[].uuid == 1f1b36d2-...`                  |
 | `encoding-version: "0.2.0"`      | the convention version (`v1`) via `schema_url` tag         |
-| `column-order: <array>`                | `df:columns: <array>`                                     |
-| `_index`| `df:index`                              |
+| `column-order: <array>`          | `columns`                                                  |
+| `_index`                         | `index`                                                    |
 
 The byte-level layout of the arrays/group could be identical to
 AnnData's , so existing data can be made conformant by renaming changing/adding json, and potentially hardening some of the **1d-interpreted array** specifications currently in anndata, like [nullable strings][].
