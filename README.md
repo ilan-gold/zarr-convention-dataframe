@@ -25,7 +25,7 @@ However, for users of scientific data stored in zarr, the prospect of using a di
 
 And sometimes, you just want that collection of **1d-interpreted arrays** of the **same length** zipped up and packaged nicely in a data structure that we are all familiar with without that extra hassle.
 
-I thus put forth a convention for dataframes in zarr, which is little more than a(n optionally indexed) collection of **1d-interpreted arrays** (more on the quotations below). 
+I thus put forth a convention for dataframes in zarr, which is little more than a(n optionally indexed) collection of **1d-interpreted arrays** (more on the bold text definitions below). 
 
 ## Layout
 
