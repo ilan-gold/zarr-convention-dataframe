@@ -19,7 +19,7 @@ Terms that need clarification are in bold in the following text.
 
 ## Why a convention?
 
-A data frame, [according to wikipedia][], is "A tabular data structure common to many data processing libraries" of which it then goes on to list a few. We all know dataframe libraries, like [polars][] or [pandas][] to reach for the lowest-hanging fruit. We are probably also familiar with the plethora of file formats that may back these data structures, like [parquet][] or the more new-fangled formats like [vortex][].
+A dataframe, [according to wikipedia][], is "A tabular data structure common to many data processing libraries" of which it then goes on to list a few. We all know dataframe libraries, like [polars][] or [pandas][] to reach for the lowest-hanging fruit. We are probably also familiar with the plethora of file formats that may back these data structures, like [parquet][] or the more new-fangled formats like [vortex][].
 
 However, for users of scientific data stored in zarr, the prospect of using a different file format for what is generally not a very big operation (relative to the scale of proper array data) is disheartening (at least for a file-format-freak like myself).
 
@@ -30,7 +30,7 @@ I thus put forth a convention for dataframes in zarr, which is little more than 
 ## Layout
 
 A conforming node is a Zarr group whose children are all **1d-interpreted arrays**.
-The data frame index, if present, counts as a column for all intents and purposes, as far as this spec is concerned.
+The dataframe index, if present, counts as a column for all intents and purposes, as far as this spec is concerned.
 Column *names* are never stored as member names; they live in `columns`.
 
 In member names below, `{i}` is a placeholder for the base-10 representation
@@ -68,8 +68,8 @@ The group’s `attributes` MUST contain a `zarr_conventions` entry (per the
 
 | Attribute       | Type         | Req. | Meaning |
 | --------------- | ------------ | ---- | ------- |
-| `df:shape`      | `integer[2]` | yes  | data frame dimensions \[rows, columns\], useful for data frames with no column or index |
-| `df:index`      | `integer`    | no   | column number of the data frame index, if one exists. MUST satisfy 0 ≤ `df:index` < `df:shape[1]`; the index data is in member `column_{df:index}` |
+| `df:shape`      | `integer[2]` | yes  | dataframe dimensions \[rows, columns\], useful for dataframes with no column or index |
+| `df:index`      | `integer`    | no   | column number of the dataframe index, if one exists. MUST satisfy 0 ≤ `df:index` < `df:shape[1]`; the index data is in member `column_{df:index}` |
 
 `df:shape` MUST be consistent with the group’s members:
 
