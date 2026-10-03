@@ -1,13 +1,13 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/TBD/zarr-convention-categorical/refs/tags/v1/schema.json",
+    "$id": "https://raw.githubusercontent.com/DOES_NOT_EXIST/zarr-dataframe/refs/tags/v1/schema.json",
     "title": "Dataframe Zarr Convention (v1)",
     "description": "Schema for the attributes of a Zarr group conforming to the dataframe convention (uuid 1f1b36d2-3185-6da8-91f6-9a0823af2d33). Describes a on-disk representation of a dataframe, can be read in with pandas, polars etc.",
     "type": "object",
     "additionalProperties": true,
     "required": [
         "zarr_conventions",
-        "df:columns"
+        "df:shape"
     ],
     "properties": {
         "zarr_conventions": {
@@ -40,18 +40,20 @@
                 ]
             }
         },
-        "df:columns": {
+        "df:shape": {
             "type": "array",
-            "minItems": 1,
-            "uniqueItems": true,
-            "items":{
-                "type": "string"
-            },
-            "description": "The 1d-interpretable columns of the dataframe, including the optional index."
+            "prefixItems": [
+                { "type": "integer", "minimum": 0 },
+                { "type": "integer", "minimum": 0 }
+            ],
+            "items": false,
+            "minItems": 2,
+            "description": "Dataframe dimensions [rows, columns]. The column count includes the optional index."
         },
         "df:index": {
-            "type": "string",
-            "description": "The columns to be optionally interpreted as an index."
+            "type": "integer",
+            "minimum": 0,
+            "description": "Column number of the dataframe index, if one exists. MUST be less than df:shape[1]; the index data is in member column_{df:index}."
         }
     }
 }
